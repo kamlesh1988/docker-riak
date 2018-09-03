@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+DOCKER_RIAK_PROTO_BUF_PORT_OFFSET="10" 
+DOCKER_RIAK_BASE_HTTP_PORT="1036" 
+DOCKER_RIAK_AUTOMATIC_CLUSTERING="1" 
+DOCKER_RIAK_CLUSTER_SIZE="5" 
+DOCKER_RIAK_BACKEND="leveldb"
 
 function start_exited_riak_containers {
   containers=$(docker ps -a -f "status=exited" --format "table {{.Names}}\t{{.ID}}\t{{.Image}}" | grep "hectcastro/riak" || :)
@@ -33,7 +38,7 @@ function start_new_riak_cluter {
   # gets forwarded to 8087. DOCKER_RIAK_PROTO_BUF_PORT_OFFSET is optional and
   # defaults to 100.
 
-  DOCKER_RIAK_PROTO_BUF_PORT_OFFSET=${DOCKER_RIAK_PROTO_BUF_PORT_OFFSET:-100}
+  DOCKER_RIAK_PROTO_BUF_PORT_OFFSET=${DOCKER_RIAK_PROTO_BUF_PORT_OFFSET:-10}
 
   echo
   echo "Bringing up cluster nodes:"
@@ -59,6 +64,8 @@ function start_new_riak_cluter {
                  -p $publish_pb_port \
                  --link "riak01:seed" \
                  --name "riak${index}" \
+		 -v /data/riak/riak-data/riak${index}/data:/var/lib/riak \
+		 -v /data/riak/riak-data/riak${index}/logs:/var/log/riak \
                  -d hectcastro/riak > /dev/null 2>&1
     else
       docker run -e "DOCKER_RIAK_CLUSTER_SIZE=${DOCKER_RIAK_CLUSTER_SIZE}" \
@@ -69,6 +76,8 @@ function start_new_riak_cluter {
                  -p $publish_http_port \
                  -p $publish_pb_port \
                  --name "riak${index}" \
+ 		 -v /data/riak/riak-data/riak${index}/data:/var/lib/riak \
+                 -v /data/riak/riak-data/riak${index}/logs:/var/log/riak \
                  -d hectcastro/riak > /dev/null 2>&1
     fi
     echo -n "Starting riak${index}..."
@@ -107,7 +116,7 @@ if [ "${DOCKER_HOST}" ]; then
 fi
 
 DOCKER_RIAK_CLUSTER_SIZE=${DOCKER_RIAK_CLUSTER_SIZE:-5}
-DOCKER_RIAK_BACKEND=${DOCKER_RIAK_BACKEND:-bitcask}
+DOCKER_RIAK_BACKEND=${DOCKER_RIAK_BACKEND:-leveldb}
 DOCKER_RIAK_STRONG_CONSISTENCY=${DOCKER_RIAK_STRONG_CONSISTENCY:-off}
 DOCKER_RIAK_SEARCH=${DOCKER_RIAK_SEARCH:-off}
 
